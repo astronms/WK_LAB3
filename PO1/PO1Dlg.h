@@ -6,6 +6,9 @@
 #include "ImgWnd.h"
 #include "afxwin.h"
 #include <GdiPlus.h>
+#include <algorithm>
+#include <vector>
+
 using namespace Gdiplus;
 
 
@@ -42,6 +45,9 @@ protected:
 	BYTE GetPixel(int x, int y);
 	void SetPixel(int x, int y, BYTE J);
 	int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
+	void CPODlg::AddMask(int mask[3][3]);
+	BYTE** CPODlg::dylatacja(BYTE** obraz);
+	BYTE** CPODlg::erozja(BYTE** obraz);
 
 	// Generated message map functions
 	virtual BOOL OnInitDialog();

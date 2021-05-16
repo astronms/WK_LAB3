@@ -122,7 +122,36 @@ BOOL CPODlg::OnInitDialog()
 	m_imgWndOUT.Create(rDlg, this, IMG_WND_ID_OUT);
 	
 	// OPCJE
+
+	//Lab1
 	m_combo1.AddString(L"convert to greyscale");
+	m_combo1.AddString(L"histogram alignment");
+	m_combo1.AddString(L"iterative binarization");
+	m_combo1.AddString(L"gradient binarization");
+
+	//Lab2
+	m_combo1.AddString(L"filtracja usredniajaca");
+	m_combo1.AddString(L"filtracja Gaussa");
+	m_combo1.AddString(L"filtracja Sobela pion");
+	m_combo1.AddString(L"filtracja Sobela poziom");
+	m_combo1.AddString(L"filtracja Lapsjan");
+	m_combo1.AddString(L"filtracja wyostrzajaca");
+
+	m_combo1.AddString(L"filtracja medianowa 3x3");
+	m_combo1.AddString(L"filtracja medianowa 5x5");
+	m_combo1.AddString(L"filtracja medianowa krzy¿ 5x5");
+
+	m_combo1.AddString(L"LoG");
+
+	//Lab3
+	m_combo1.AddString(L"Dylatacja");
+	m_combo1.AddString(L"Erozja");
+	m_combo1.AddString(L"Otwarcie");
+	m_combo1.AddString(L"Zamkniêcie");
+
+	m_combo1.AddString(L"Kontur wewnêtrzny");
+	m_combo1.AddString(L"Kontur zewnêtrzny");
+
 	m_combo1.SelectString(0, L"convert to greyscale");
 
 
@@ -226,6 +255,473 @@ void CPODlg::OnBnClickedButtonProcess()
 
 	}
 
+	if (sOption == L"histogram alignment")
+	{
+		float colorCount[256] = { 0 };
+		for (int x = 0; x < m_imgW; x++)
+		{
+			for (int y = 0; y < m_imgH; y++)
+			{
+				BYTE J = GetPixel(x, y);
+				colorCount[J] = colorCount[J] + 1;
+			}
+		}
+
+
+		for (int x = 0; x < m_imgW; x++)
+		{
+			for (int y = 0; y < m_imgH; y++)
+			{
+				BYTE J = GetPixel(x, y);
+				float newColor = 0;
+				for (int i = 0; i < J; i++)
+				{
+					newColor += colorCount[i] / (m_imgH * m_imgW);
+				}
+				newColor *= 255;
+				SetPixel(x, y, newColor);
+			}
+		}
+
+	}
+
+	if (sOption == L"iterative binarization")
+	{
+		float colorCount[256] = { 0 };
+		for (int x = 0; x < m_imgW; x++)
+		{
+			for (int y = 0; y < m_imgH; y++)
+			{
+				BYTE J = GetPixel(x, y);
+				colorCount[J] = colorCount[J] + 1;
+			}
+		}
+
+		int threshold = 255 / 2;
+		int oldThreshold = 0;
+
+		do
+		{
+			oldThreshold = threshold;
+			float mi0 = 0;
+			float mi1 = 0;
+			float p0 = 0;
+			float p1 = 0;
+
+			for (int i = 0; i < threshold; i++)
+				p0 += colorCount[i] / (m_imgH * m_imgW) * 255;
+
+			for (int i = 255; i > threshold; i--)
+				p1 += colorCount[i] / (m_imgH * m_imgW) * 255;
+
+			for (int i = 0; i < threshold; i++)
+				mi0 += (i * colorCount[i] / (m_imgH * m_imgW) * 255) / p0;
+
+			for (int i = 255; i > threshold; i--)
+				mi1 += (i * colorCount[i] / (m_imgH * m_imgW) * 255) / p1;
+
+			threshold = (mi0 + mi1) / 2;
+		} while (abs(oldThreshold - threshold) >= 2);
+
+		for (int x = 0; x < m_imgW; x++)
+		{
+			for (int y = 0; y < m_imgH; y++)
+			{
+				BYTE J = GetPixel(x, y);
+				if (J > threshold)
+					SetPixel(x, y, 255);
+				else
+					SetPixel(x, y, 0);
+			}
+		}
+
+	}
+
+	if (sOption == L"gradient binarization")
+	{
+
+		unsigned int G = 0;
+		unsigned int GJ = 0;
+		
+		for (int x = 0; x < m_imgW; x++)
+		{
+			for (int y = 1; y < m_imgH; y++)
+			{
+				int Gx = GetPixel(x + 1, y) - GetPixel(x - 1, y);
+				int Gy = GetPixel(x, y + 1) - GetPixel(x, y - 1);
+
+				int temp = max(abs(Gx), abs(Gy));
+
+				G += temp;
+				GJ += temp * GetPixel(x, y);
+			}
+		}
+
+		int threshold = (float)GJ / G;
+
+		for (int x = 0; x < m_imgW; x++)
+		{
+			for (int y = 0; y < m_imgH; y++)
+			{
+				BYTE J = GetPixel(x, y);
+				if (J > threshold)
+					SetPixel(x, y, 255);
+				else
+					SetPixel(x, y, 0);
+			}
+		}
+	}
+
+	if (sOption == L"filtracja usredniajaca")
+	{
+		int mask[3][3] = { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } };
+		AddMask(mask);
+	}
+
+	if (sOption == L"filtracja Gaussa")
+	{
+		int mask[3][3] = { { 1, 4, 1 }, { 4, 12, 4 }, { 1, 4, 1 } };
+		AddMask(mask);
+	}
+
+	if (sOption == L"filtracja Sobela pion")
+	{
+		int mask[3][3] = { { 1, 2, 1 }, { 0, 0, 0 }, { -1, -2, -1 } };
+		AddMask(mask);
+	}
+
+	if (sOption == L"filtracja Sobela poziom")
+	{
+		int mask[3][3] = { { -1, 0, 1 }, { -2, 0, 2 }, { -1, 0, 1 } };
+		AddMask(mask);
+	}
+
+	if (sOption == L"filtracja Lapsjan")
+	{
+		int mask[3][3] = { { -2, 1, -2 }, { 1, 4, 1 }, { -2, 1, -2 } };
+		AddMask(mask);
+	}
+
+	if (sOption == L"filtracja wyostrzajaca")
+	{
+		int mask[3][3] = { { 0, -1, 0}, { -1, 5, -1 }, { 0, -1, 0 } };
+		AddMask(mask);
+	}
+
+	if (sOption == L"filtracja medianowa 3x3")
+	{
+
+		BYTE** tempTab = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			tempTab[i] = new BYTE[m_imgH];
+		}
+
+		for (int y = 1; y < m_imgH - 1; y++) 
+		{
+			for (int x = 1; x < m_imgW - 1; x++) 
+			{
+				std::vector<int> vNeighbors;
+				for (int i = 0; i < 3; i++)
+				{
+					for (int j = 0; j < 3; j++)
+					{
+						vNeighbors.push_back(GetPixel(x - i - 1, y - j - 1));
+					}
+				}
+
+				std::sort(vNeighbors.begin(), vNeighbors.end());
+				tempTab[x][y] = vNeighbors[4];
+			}
+		}
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				SetPixel(x, y, tempTab[x][y]);
+			}
+		}
+	}
+
+	if (sOption == L"filtracja medianowa 5x5")
+	{
+
+		BYTE** tempTab = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			tempTab[i] = new BYTE[m_imgH];
+		}
+
+		for (int y = 1; y < m_imgH - 1; y++)
+		{
+			for (int x = 1; x < m_imgW - 1; x++)
+			{
+				std::vector<int> vNeighbors;
+				for (int i = -2; i <= 2; i++)
+				{
+					for (int j = -2; j <= 2; j++)
+					{
+						vNeighbors.push_back(GetPixel(x - i, y - j));
+					}
+				}
+
+				std::sort(vNeighbors.begin(), vNeighbors.end());
+				tempTab[x][y] = vNeighbors[4];
+			}
+		}
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				SetPixel(x, y, tempTab[x][y]);
+			}
+		}
+	}
+
+	if (sOption == L"filtracja medianowa krzy¿ 5x5")
+	{
+
+		BYTE** tempTab = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			tempTab[i] = new BYTE[m_imgH];
+		}
+
+		for (int y = 1; y < m_imgH - 1; y++)
+		{
+			for (int x = 1; x < m_imgW - 1; x++)
+			{
+				std::vector<int> vNeighbors;
+				for (int i = -2; i <= 2; i++)
+				{
+					if (i != 0)
+						vNeighbors.push_back(GetPixel(x - i, y));
+					else
+					{
+						for (int j = -2; j <= 2; j++)
+						{
+							vNeighbors.push_back(GetPixel(x - i, y - j));
+						}
+					}
+				}
+
+				std::sort(vNeighbors.begin(), vNeighbors.end());
+				tempTab[x][y] = vNeighbors[4];
+			}
+		}
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				SetPixel(x, y, tempTab[x][y]);
+			}
+		}
+	}
+
+	if (sOption == L"LoG") {
+		float sig = 0.6f;
+		int maskSize = 1 + (2 * ceil(2.5 * sig));
+		int maskCenter = maskSize / 2;
+
+		float** mask = new float* [maskSize];
+		for (int i = 0; i < maskSize; i++)
+		{
+			mask[i] = new float[maskSize];
+		}
+
+		for (int x = -1 * maskCenter; x <= maskCenter; x++)
+		{
+			for (int y = -1 * maskCenter; y <= maskCenter; y++)
+			{
+				float log = ((x * x) + (y * y) - (2 * sig * sig)) / (sig * sig * sig * sig);
+				float expr = -1 * (((x * x) + (y * y)) / (2 * sig * sig));
+
+				mask[x + maskCenter][y + maskCenter] = log * exp(expr);
+			}
+		}
+
+		for (int x = maskCenter; x < m_imgW - maskCenter; x++)
+		{
+			for (int y = maskCenter; y < m_imgH - maskCenter; y++)
+			{
+				float JsSum = 0;
+				for (int i = -1 * maskCenter; i <= maskCenter; i++)
+				{
+					for (int j = -1 * maskCenter; j <= maskCenter; j++)
+					{
+						BYTE Js = GetPixel(x - i, y - j);
+						JsSum += Js * mask[i + maskCenter][j + maskCenter];
+					}
+				}
+
+				float newJs = JsSum + 80;
+
+				if (newJs < 0) newJs = 0;
+				else newJs = 255;
+				SetPixel(x, y, newJs);
+			}
+		}
+
+
+		for (int i = 0; i < maskSize; i++)
+		{
+			delete[] mask[i];
+		}
+		delete[] mask;
+	}
+
+	if (sOption == L"Dylatacja")
+	{
+
+		BYTE** obraz = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			obraz[i] = new BYTE[m_imgH];
+			for (int j = 0; j < m_imgH; j++)
+			{
+				obraz[i][j] = GetPixel(i, j);
+			}
+		}
+
+		BYTE** tempTab = dylatacja(obraz);
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				SetPixel(x, y, tempTab[x][y]);
+			}
+		}
+	}
+
+	if (sOption == L"Erozja")
+	{
+		BYTE** obraz = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			obraz[i] = new BYTE[m_imgH];
+			for (int j = 0; j < m_imgH; j++)
+			{
+				obraz[i][j] = GetPixel(i, j);
+			}
+		}
+
+		BYTE** tempTab = erozja(obraz);
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				SetPixel(x, y, tempTab[x][y]);
+			}
+		}
+	}
+
+	if (sOption == L"Otwarcie")
+	{
+		BYTE** obraz = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			obraz[i] = new BYTE[m_imgH];
+			for (int j = 0; j < m_imgH; j++)
+			{
+				obraz[i][j] = GetPixel(i, j);
+			}
+		}
+
+		BYTE** tempTab = erozja(obraz);
+		BYTE** tempTab2 = dylatacja(tempTab);
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				SetPixel(x, y, tempTab2[x][y]);
+			}
+		}
+	}
+
+	if (sOption == L"Zamkniêcie")
+	{
+		BYTE** obraz = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			obraz[i] = new BYTE[m_imgH];
+			for (int j = 0; j < m_imgH; j++)
+			{
+				obraz[i][j] = GetPixel(i, j);
+			}
+		}
+
+		BYTE** tempTab = dylatacja(obraz);
+		BYTE** tempTab2 = erozja(tempTab);
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				SetPixel(x, y, tempTab2[x][y]);
+			}
+		}
+	}
+
+	if (sOption == L"Kontur wewnêtrzny")
+	{
+		BYTE** obraz = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			obraz[i] = new BYTE[m_imgH];
+			for (int j = 0; j < m_imgH; j++)
+			{
+				obraz[i][j] = GetPixel(i, j);
+			}
+		}
+
+		BYTE** tempTab = erozja(obraz);
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				if(GetPixel(x, y) != tempTab[x][y])
+					SetPixel(x, y, 0);
+				else
+					SetPixel(x, y, 255);
+			}
+		}
+	}
+
+	if (sOption == L"Kontur zewnêtrzny")
+	{
+		BYTE** obraz = new BYTE * [m_imgW];
+		for (int i = 0; i < m_imgW; ++i)
+		{
+			obraz[i] = new BYTE[m_imgH];
+			for (int j = 0; j < m_imgH; j++)
+			{
+				obraz[i][j] = GetPixel(i, j);
+			}
+		}
+
+		BYTE** tempTab = dylatacja(obraz);
+
+		for (int y = 0; y < m_imgH; y++)
+		{
+			for (int x = 0; x < m_imgW; x++)
+			{
+				if (GetPixel(x, y) != tempTab[x][y])
+					SetPixel(x, y, 0);
+				else
+					SetPixel(x, y, 255);
+			}
+		}
+	}
+
+
+
 	/*********************************************************************************************************************************
 	TU NALE¯Y WSTAWIC OBS£UGÊ POZOSTA£YCH OPCJI
 	
@@ -262,6 +758,190 @@ void CPODlg::OnBnClickedButtonProcess()
 
 	Invalidate();
 	EndWaitCursor();
+}
+
+void CPODlg::AddMask(int mask[3][3]) {
+	
+	int sumW = 0;
+	bool containsNegative = false; 
+
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			if (mask[i][j] < 0)
+				containsNegative = true;
+			sumW += mask[i][j];
+		}
+	}
+
+	for (int x = 1; x < m_imgW - 1; x++)
+	{
+		for (int y = 1; y < m_imgH - 1; y++)
+		{
+			int sumJ = 0;
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 3; j++)
+				{
+					sumJ += GetPixel(x - i - 1, y - j - 1) * mask[i][j];
+				}
+			}
+
+			if (containsNegative)
+				sumJ += 127;
+			else
+				sumJ /= sumW;
+
+			if (sumJ < 0)
+				sumJ = 0;
+			if (sumJ > 255)
+				sumJ = 255;
+
+			SetPixel(x, y, sumJ);
+		}
+	}
+}
+
+BYTE** CPODlg::dylatacja(BYTE** obraz)
+{
+	/*
+	//Dla czarno-bialych
+	BYTE** tempTab = new BYTE * [m_imgW];
+	for (int i = 0; i < m_imgW; ++i)
+	{
+		tempTab[i] = new BYTE[m_imgH];
+		for (int j = 0; j < m_imgH; j++)
+		{
+			tempTab[i][j] = 255;
+		}
+	}
+
+	for (int x = 0; x < m_imgW; x++)
+	{
+		for (int y = 0; y < m_imgH; y++)
+		{
+			BYTE c = obraz[x][y];
+
+			if (c == 0)
+			{
+				tempTab[x][y] = 0;
+
+				for (int i = -1; i <= 1; i++)
+				{
+					for (int j = -1; j <= 1; j++)
+					{
+						if(x+i >= 0 && x+i < m_imgW && y+j >=0 && y+j < m_imgH)
+							tempTab[x+i][y+j] = 0;
+					}
+				}
+			}
+		}
+	}
+
+	return tempTab;  */
+
+	//odcienie szaroœci + czarno biale
+	BYTE** tempTab = new BYTE * [m_imgW];
+	for (int i = 0; i < m_imgW; ++i)
+	{
+		tempTab[i] = new BYTE[m_imgH];
+	}
+
+	for (int x = 0; x < m_imgW; x++)
+	{
+		for (int y = 0; y < m_imgH; y++)
+		{
+			int max = 255;
+
+			for (int i = -1; i <= 1; i++)
+			{
+				for (int j = -1; j <= 1; j++)
+				{
+					if (x + i >= 0 && x + i < m_imgW && y + j >= 0 && y + j < m_imgH)
+					{
+						if (obraz[x + i][y + j] < max)
+							max = obraz[x + i][y + j];
+					}
+				}
+			}
+			tempTab[x][y] = max;
+		}
+	}
+
+	return tempTab;
+}
+
+BYTE** CPODlg::erozja(BYTE** obraz)
+{
+	/*
+	//czarno-biale 
+	BYTE** tempTab = new BYTE * [m_imgW];
+	for (int i = 0; i < m_imgW; ++i)
+	{
+		tempTab[i] = new BYTE[m_imgH];
+		for (int j = 0; j < m_imgH; j++)
+		{
+			tempTab[i][j] = 255;
+		}
+	}
+
+	for (int x = 0; x < m_imgW; x++)
+	{
+		for (int y = 0; y < m_imgH; y++)
+		{
+			BYTE c = obraz[x][y];
+
+			if (c == 0)
+			{
+				bool wyszlo = false;
+				for (int i = -1; i <= 1; i++)
+				{
+					for (int j = -1; j <= 1; j++)
+					{
+						if (x + i >= 0 && x + i < m_imgW && y + j >= 0 && y + j < m_imgH)
+						{
+							if (obraz[x+i][y+j] > 0)
+								wyszlo = true;
+						}
+					}
+				}
+				if (wyszlo == false)
+					tempTab[x][y] = 0;
+			}
+		}
+	}
+
+	return tempTab;*/
+	//odcienie szaroœci + czarno biale
+	BYTE** tempTab = new BYTE * [m_imgW];
+	for (int i = 0; i < m_imgW; ++i)
+	{
+		tempTab[i] = new BYTE[m_imgH];
+	}
+
+	for (int x = 0; x < m_imgW; x++)
+	{
+		for (int y = 0; y < m_imgH; y++)
+		{
+			int max = 0;
+
+			for (int i = -1; i <= 1; i++)
+			{
+				for (int j = -1; j <= 1; j++)
+				{
+					if (x + i >= 0 && x + i < m_imgW && y + j >= 0 && y + j < m_imgH)
+					{
+						if (obraz[x + i][y + j] > max)
+							max = obraz[x + i][y + j];
+					}
+				}
+			}
+			tempTab[x][y] = max;
+		}
+	}
+
+	return tempTab;
 }
 
 
